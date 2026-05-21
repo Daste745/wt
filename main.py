@@ -1,5 +1,3 @@
-import os
-import random
 import subprocess
 from pathlib import Path
 from typing import Annotated
@@ -7,25 +5,9 @@ from typing import Annotated
 from cyclopts import App, Parameter
 
 from config import parse_config
+from env import get_base_env, get_port_env_var_name, get_random_port
 
 app = App()
-
-
-def get_random_port() -> int:
-    return random.randint(1024, 65535)
-
-
-def get_port_env_var_name(project_name: str, port_name: str) -> str:
-    return f"{project_name.upper()}_{port_name.upper()}_PORT"
-
-
-def get_env() -> dict[str, str]:
-    return {
-        # TODO: Build a sandboxed environment with programs required to initialize a worktree,
-        #       potentially allowing to specify extra programs in the config,
-        #       similar to `runtimeInputs` in `pkgs.writeShellApplication`.
-        "PATH": os.environ.get("PATH", ""),
-    }
 
 
 @app.command
@@ -90,7 +72,7 @@ def init(
             "-c",
             project.post_init_script,
         ],
-        env=get_env() | env,
+        env=get_base_env() | env,
     )
 
 
