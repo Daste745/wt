@@ -3,16 +3,18 @@
     id = "backend";
     ports = [ "api" ];
     postInit = ''
-      # TODO)) Generate random server ports for `ports`
-      # TODO)) Update server port from `ports`->`api`
+      set -euo pipefail
+
+      sed -i "s/^PORT=.*\$/PORT=$BACKEND_API_PORT/" .env
     '';
   };
   projects.frontend = {
     id = "frontend";
     requires = [ "backend" ];
     postInit = ''
-      # TODO)) Pass port generated for backend (maybe `BACKEND_API_PORT`?)
-      # TODO)) Set VITE_API_URL in .env to the backend URL
+      set -euo pipefail
+
+      sed -i "s/^VITE_API_URL=.*\$/VITE_API_URL=http:\/\/localhost:$BACKEND_API_PORT/" .env
     '';
   };
 }
