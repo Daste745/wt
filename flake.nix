@@ -16,6 +16,10 @@
           packages = with pkgs; [
             python314
             python314Packages.uv
+
+            # For examples
+            nodejs
+            pnpm
           ];
           shellHook = ''
             uv sync --frozen --no-install-project --group dev
