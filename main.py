@@ -33,6 +33,7 @@ def init(
     *,
     config_path: Annotated[Path, Parameter("config", alias="-c")],
     project_id: Annotated[str, Parameter("project", alias="-p")],
+    worktree_name: Annotated[str, Parameter("name", alias="-n")],
 ) -> None:
     """
     Initialize a worktree
@@ -43,6 +44,8 @@ def init(
         Path to the worktree configuration file
     project_id:
         Project ID from the configuration file
+    worktree_name:
+        Name of the worktree
     """
 
     if not config_path.exists():
@@ -64,19 +67,19 @@ def init(
         # TODO: Ask the user which worktree they want to use as the dependency
         raise NotImplementedError("Dependency resolution is not yet implemented")
 
+    env: dict[str, str] = {}
+    print(f"Worktree name: {worktree_name}")
+    env["WORKTREE_NAME"] = worktree_name
+
     print(f"Ports: {', '.join(project.port_names)}")
-    port_env: dict[str, str] = {}
     # TODO: Write generated ports into some persistent config,
     #       so they can be reused by dependent projects
     for port_name in project.port_names:
         port = get_random_port()
         env_var_name = get_port_env_var_name(project.id, port_name)
-        port_env[env_var_name] = str(port)
+        env[env_var_name] = str(port)
 
-    print(f"Env: {' '.join(f'{k}={v}' for k, v in port_env.items())}")
-
-    env = get_env()
-    env.update(port_env)
+    print(f"Env: {' '.join(f'{k}={v}' for k, v in env.items())}")
 
     print("Running post-init script...")
     subprocess.run(
@@ -87,7 +90,7 @@ def init(
             "-c",
             project.post_init_script,
         ],
-        env=env,
+        env=get_env() | env,
     )
 
 
