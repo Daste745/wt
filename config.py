@@ -7,6 +7,8 @@ from nix_manipulator.expressions import AttributeSet, Binding, Primitive
 from nix_manipulator.expressions.indented_string import IndentedString
 from nix_manipulator.expressions.list import NixList
 
+from util import strip_indented_string
+
 PROJECTS = "projects"
 ID = "id"
 REQUIRES = "requires"
@@ -159,13 +161,5 @@ def parse_post_init(source: Binding) -> str:
         raise ValueError(
             f"Expected an indented string for postInit, got {type(source.value)}"
         )
+
     return strip_indented_string(str(source.value.value)).strip()
-
-
-def strip_indented_string(value: str) -> str:
-    longest_prefix = 0
-    for line in value.splitlines():
-        if line.strip() != "":
-            longest_prefix = max(longest_prefix, len(line) - len(line.lstrip()))
-
-    return "\n".join(line[longest_prefix:] for line in value.splitlines())
