@@ -12,12 +12,21 @@
         "!pylsp",
         "ruff",
         "ty",
-        "...",
+        "..."
       ],
       "formatter": [{ "language_server": { "name": "ruff" } }],
       "code_actions_on_format": {
-        "source.fixAll.ruff": true,
-      },
+        "source.fixAll.ruff": true
+      }
     },
-  },
+    "JSON": {
+      "tab_size": 2
+    },
+    "JSONC": {
+      "tab_size": 2
+    },
+    "YAML": {
+      "tab_size": 2
+    }
+  }
 }
