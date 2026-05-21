@@ -79,7 +79,16 @@ def init(
     env.update(port_env)
 
     print("Running post-init script...")
-    subprocess.run(["bash", "-c", project.post_init_script], env=env)
+    subprocess.run(
+        [
+            "bash",
+            "-euo",
+            "pipefail",
+            "-c",
+            project.post_init_script,
+        ],
+        env=env,
+    )
 
 
 if __name__ == "__main__":
