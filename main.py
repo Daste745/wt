@@ -40,16 +40,27 @@ def init(
         raise ValueError(f"Project not found: {project_id!r}")
 
     print(f"Initalizing project '{project.id}'")
+    env: dict[str, str] = {}
 
     if len(project.dependencies) > 0:
-        print(f"Dependencies: {', '.join(project.dependencies)}")
-        # TODO: Resolve dependencies and their ports
-        # TODO: Make sure all dependencies have been initialized
-        # TODO: Load generated ports from dependencies
-        # TODO: Ask the user which worktree they want to use as the dependency
-        raise NotImplementedError("Dependency resolution is not yet implemented")
+        for dependency in project.dependencies:
+            dependency_project = config.get_project(dependency)
+            if dependency_project is None:
+                raise ValueError(f"Dependency not found: {dependency!r}")
+            if len(dependency_project.dependencies) > 0:
+                raise NotImplementedError(
+                    "Nested dependency resolution is not yet implemented"
+                )
 
-    env: dict[str, str] = {}
+            print(f"Dependency found: '{dependency_project.id}'")
+
+            # TODO: Ask the user which worktree they want to use as the dependency
+            # TODO: Get previously generated ports from some persistent config storage
+            for port_name in dependency_project.port_names:
+                port = input(f"Port number for '{port_name}': ")
+                env_var_name = get_port_env_var_name(dependency_project.id, port_name)
+                env[env_var_name] = port.strip()
+
     print(f"Worktree name: {worktree_name}")
     env["WORKTREE_NAME"] = worktree_name
 
