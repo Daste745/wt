@@ -3,15 +3,21 @@ from pathlib import Path
 from typing import Any, final
 
 import nix_manipulator.parser
-from nix_manipulator.expressions import AttributeSet, Binding
+from nix_manipulator.expressions import AttributeSet, Binding, Primitive
+from nix_manipulator.expressions.indented_string import IndentedString
+from nix_manipulator.expressions.list import NixList
 
 PROJECTS = "projects"
+ID = "id"
+REQUIRES = "requires"
+PORTS = "ports"
+POST_INIT = "postInit"
 
 
 @final
 @dataclass(frozen=True)
 class Project:
-    name: str
+    id: str
     dependencies: list[str]
     port_names: list[str]
     post_init_script: str
@@ -21,6 +27,13 @@ class Project:
 @dataclass(frozen=True)
 class Config:
     projects: list[Project]
+
+    def get_project(self, project_id: str) -> Project | None:
+        for project in self.projects:
+            if project.id == project_id:
+                return project
+
+        return None
 
 
 def parse_config(path: Path) -> Config:
@@ -66,11 +79,93 @@ def parse_config(path: Path) -> Config:
 
 
 def parse_project(source: Binding, name: str) -> Project:
-    print("parse project", name)
+    if not isinstance(source.value, AttributeSet):
+        raise ValueError(
+            f"Expected an attribute set for project {name}, got {type(source.value)}"
+        )
+
+    parsed_id: str | None = None
+    parsed_requires: list[str] = []
+    parsed_ports: list[str] = []
+    parsed_post_init: str | None = None
+
+    for attribute in source.value.values:
+        if not isinstance(attribute, Binding):
+            raise ValueError(f"Expected a binding, got {type(attribute)}")
+
+        if attribute.name == ID:
+            parsed_id = parse_id(attribute)
+
+        elif attribute.name == REQUIRES:
+            parsed_requires = parse_requires(attribute)
+
+        elif attribute.name == PORTS:
+            parsed_ports = parse_port_names(attribute)
+
+        elif attribute.name == POST_INIT:
+            parsed_post_init = parse_post_init(attribute)
+
+        else:
+            raise ValueError(f"Unknown project attribute: {attribute.name!r}")
+
+    if parsed_id is None:
+        raise ValueError("Project attribute 'id' is required")
+
+    if parsed_post_init is None:
+        raise ValueError("Project attribute 'postInit' is required")
 
     return Project(
-        name=name,
-        dependencies=["TODO"],
-        port_names=["TODO"],
-        post_init_script="TODO",
+        id=parsed_id,
+        dependencies=parsed_requires,
+        port_names=parsed_ports,
+        post_init_script=parsed_post_init,
     )
+
+
+def parse_id(source: Binding) -> str:
+    if not isinstance(source.value, Primitive):
+        raise ValueError(f"Expected a primitive for id, got {type(source.value)}")
+    return str(source.value.value)
+
+
+def parse_requires(source: Binding) -> list[str]:
+    if not isinstance(source.value, NixList):
+        raise ValueError(f"Expected a list for requires, got {type(source.value)}")
+
+    requires: list[str] = []
+    for require in source.value.value:
+        if not isinstance(require, Primitive):
+            raise ValueError(f"Expected a primitive for require, got {type(require)}")
+        requires.append(str(require.value))
+
+    return requires
+
+
+def parse_port_names(source: Binding) -> list[str]:
+    if not isinstance(source.value, NixList):
+        raise ValueError(f"Expected a list for ports, got {type(source.value)}")
+
+    ports: list[str] = []
+    for port in source.value.value:
+        if not isinstance(port, Primitive):
+            raise ValueError(f"Expected a primitive for port, got {type(port)}")
+        ports.append(str(port.value))
+
+    return ports
+
+
+def parse_post_init(source: Binding) -> str:
+    if not isinstance(source.value, IndentedString):
+        raise ValueError(
+            f"Expected an indented string for postInit, got {type(source.value)}"
+        )
+    return strip_indented_string(str(source.value.value)).strip()
+
+
+def strip_indented_string(value: str) -> str:
+    longest_prefix = 0
+    for line in value.splitlines():
+        if line.strip() != "":
+            longest_prefix = max(longest_prefix, len(line) - len(line.lstrip()))
+
+    return "\n".join(line[longest_prefix:] for line in value.splitlines())

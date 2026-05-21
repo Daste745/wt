@@ -21,7 +21,7 @@ def get_port_env_var_name(project_name: str, port_name: str) -> str:
 def init(
     *,
     config_path: Annotated[Path, Parameter("config", alias="-c")],
-    project_name: Annotated[str, Parameter("project", alias="-p")],
+    project_id: Annotated[str, Parameter("project", alias="-p")],
 ) -> None:
     """
     Initialize the worktree
@@ -30,17 +30,21 @@ def init(
     ----------
     config_path:
         Path to the worktree configuration file
-    project_name:
+    project_id:
         Project ID from the configuration file
     """
 
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    print(f"Init {project_name} from {config_path}")
-
     config = parse_config(config_path)
-    print(config)
+
+    project = config.get_project(project_id)
+    if project is None:
+        raise ValueError(f"Project not found: {project_id!r}")
+
+    print(f"Init {project.id} from {config_path}")
+    print(project)
 
 
 if __name__ == "__main__":
