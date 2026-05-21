@@ -36,8 +36,8 @@ class Config:
         return None
 
 
-def parse_config(path: Path) -> Config:
-    source = nix_manipulator.parser.parse(path)
+def parse_config(source_code: bytes | str | Path) -> Config:
+    source = nix_manipulator.parser.parse(source_code)
 
     if len(source.value) != 1:
         raise ValueError("Expected exactly one top-level attribute set")
