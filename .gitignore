@@ -1,0 +1,6 @@
+.direnv/
+.envrc.local
+
+result/
+
+.venv/
