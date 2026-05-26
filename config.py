@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, final
@@ -36,6 +37,30 @@ class Config:
                 return project
 
         return None
+
+    def walk_project_dependencies(
+        self,
+        project: Project,
+        *,
+        visited: set[str] | None = None,
+    ) -> Generator[Project]:
+        """Walk the dependency tree in order of declaration, skipping duplicates"""
+
+        if visited is None:
+            visited = set()
+
+        visited.add(project.id)
+
+        for dependency_id in project.dependencies:
+            if dependency_id in visited:
+                continue
+
+            dep_project = self.get_project(dependency_id)
+            if dep_project is None:
+                raise ValueError(f"Dependency not found: {dependency_id!r}")
+
+            yield dep_project
+            yield from self.walk_project_dependencies(dep_project, visited=visited)
 
 
 def parse_config(source_code: bytes | str | Path) -> Config:
