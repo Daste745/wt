@@ -188,3 +188,41 @@ def parse_post_init(source: Binding) -> str:
         )
 
     return strip_indented_string(str(source.value.value)).strip()
+
+
+@final
+@dataclass(frozen=True)
+class Diagnostic:
+    project_id: str
+    message: str
+
+
+def validate_config(config: Config) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+
+    # 1st pass: duplicate project IDs
+    project_ids = set[str]()
+    for project in config.projects:
+        if project.id in project_ids:
+            diagnostics.append(
+                Diagnostic(
+                    project_id=project.id,
+                    message=f"Duplicate project ID: {project.id!r}",
+                )
+            )
+        project_ids.add(project.id)
+
+    # 2nd pass: unknown dependencies
+    for project in config.projects:
+        for dependency_id in project.dependencies:
+            if dependency_id not in project_ids:
+                diagnostics.append(
+                    Diagnostic(
+                        project_id=project.id,
+                        message=f"Unknown dependency: {dependency_id!r}",
+                    )
+                )
+
+    # TODO)) Detect dependency cycles
+
+    return diagnostics

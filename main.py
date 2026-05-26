@@ -4,7 +4,7 @@ from typing import Annotated
 
 from cyclopts import App, Parameter
 
-from config import parse_config
+from config import parse_config, validate_config
 from env import get_base_env, get_port_env_var_name, get_random_port
 
 app = App()
@@ -16,7 +16,7 @@ def init(
     config_path: Annotated[Path, Parameter("config", alias="-c")],
     project_id: Annotated[str, Parameter("project", alias="-p")],
     worktree_name: Annotated[str, Parameter("name", alias="-n")],
-) -> None:
+) -> int | None:
     """
     Initialize a worktree
 
@@ -34,6 +34,11 @@ def init(
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
     config = parse_config(config_path)
+    if diagnostics := validate_config(config):
+        print("Configuration errors:")
+        for diagnostic in diagnostics:
+            print(f"  {diagnostic.project_id}: {diagnostic.message}")
+        return 1
 
     project = config.get_project(project_id)
     if project is None:
