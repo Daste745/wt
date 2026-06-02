@@ -8,6 +8,48 @@ from config import parse_config, validate_config
 from env import get_base_env, get_port_env_var_name, get_random_port
 
 app = App()
+app_config = App(name="config", help="Manage worktree configuration")
+app.command(app_config)
+
+
+@app_config.command(name="show")
+def config_show(
+    *,
+    config_path: Annotated[Path, Parameter("config", alias="-c")],
+) -> int | None:
+    """
+    Parse and show the configuration file
+
+    Parameters
+    ----------
+    config_path:
+        Path to the worktree configuration file
+    """
+
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+
+    config = parse_config(config_path)
+    if diagnostics := validate_config(config):
+        print("Configuration errors:")
+        for diagnostic in diagnostics:
+            print(f"  {diagnostic.project_id}: {diagnostic.message}")
+        return 1
+
+    print(f"Config '{config.id}'")
+    if config.projects:
+        for project in config.projects:
+            print(f"  Project '{project.id}'")
+            if project.dependencies:
+                print(f"    Dependencies: {', '.join(project.dependencies)}")
+            else:
+                print("    Dependencies: <none>")
+            if project.port_names:
+                print(f"    Port names: {', '.join(project.port_names)}")
+            else:
+                print("    Port names: <none>")
+    else:
+        print("  No projects")
 
 
 @app.command
