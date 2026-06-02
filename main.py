@@ -287,8 +287,15 @@ def init(
     env: dict[str, str] = {}
     selected_dependencies: dict[db.ProjectId, db.WorktreeName | None] = {}
 
-    # TODO)) Only ask for direct dependencies
-    for dependency in config.walk_project_dependencies(project):
+    for dependency_id in project.dependencies:
+        dependency = config.get_project(dependency_id)
+        if dependency is None:
+            raise ValueError(f"Dependency not found: '{dependency_id}'")
+
+        # TODO)) Support nested dependencies (e.g. frontend -> backend -> db)
+        if len(dependency.dependencies) > 0:
+            raise NotImplementedError("Nested dependencies aren't supported)")
+
         choices: list[tuple[str, db.Worktree | str]] = []
 
         db_dependency = db_config.projects.get(dependency.id)
