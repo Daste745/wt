@@ -107,6 +107,11 @@ def db_show(
                 if show_paths:
                     print(f"      Path: {worktree.path}")
 
+                for dependency_id, dependency_worktree in worktree.dependencies.items():
+                    print(
+                        f"      Dependency '{dependency_id}': '{dependency_worktree}'"
+                    )
+
                 for port_name, port_number in worktree.ports.items():
                     env_var_name = get_port_env_var_name(project_id, port_name)
                     print(f"      Port '{port_name}': {port_number} ({env_var_name})")
