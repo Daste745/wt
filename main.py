@@ -1,13 +1,18 @@
 import subprocess
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
+import inquirer
 from cyclopts import App, Parameter
 
 import db
 from config import parse_config, validate_config
 from db import load_db, write_db
 from env import get_base_env, get_port_env_var_name, get_random_port
+
+CUSTOM_WORKTREE = "__CUSTOM_WORKTREE__"
+CustomWorktree = Literal["__CUSTOM_WORKTREE__"]
+
 
 app = App()
 app_config = App(name="config", help="Manage worktree configuration")
@@ -175,6 +180,34 @@ def register(
     if db_worktree is not None:
         raise ValueError(f"Worktree already exists: '{worktree_name}'")
 
+    selected_dependencies: dict[db.ProjectId, db.WorktreeName | None] = {}
+    for dependency_id in project.dependencies:
+        dependency = config.get_project(dependency_id)
+        if dependency is None:
+            raise ValueError(f"Dependency not found: '{dependency_id}'")
+
+        choices: list[tuple[str, db.Worktree | str]] = []
+
+        db_dependency = db_config.projects.get(dependency.id)
+        if db_dependency:
+            for worktree in db_dependency.worktrees:
+                label = f"{worktree.name} ({worktree.path})"
+                choices.append((label, worktree))
+
+        choices.append(("Custom", CUSTOM_WORKTREE))
+        selected_db_dependency: db.Worktree | CustomWorktree = inquirer.list_input(
+            f"Which '{dependency.id}' worktree is a dependency?",
+            choices=choices,
+            carousel=True,
+        )
+
+        if selected_db_dependency == CUSTOM_WORKTREE:
+            print(f"Using custom ports for '{dependency.id}'")
+            selected_dependencies[dependency.id] = None
+        else:
+            print(f"Using '{dependency.id}' ports from '{selected_db_dependency.name}'")
+            selected_dependencies[dependency.id] = selected_db_dependency.name
+
     # Manually input ports when registering an existing worktree
     ports: dict[db.PortName, int] = {}
     for port_name in project.port_names:
@@ -185,6 +218,7 @@ def register(
         name=worktree_name,
         path=worktree_path,
         ports=ports,
+        dependencies=selected_dependencies,
     )
     db_project.worktrees.append(db_worktree)
 

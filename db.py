@@ -8,6 +8,7 @@ from pydantic_core import from_json
 type DbVersion = Literal[0]
 type ConfigId = str
 type ProjectId = str
+type WorktreeName = str
 type PortName = str
 
 
@@ -33,9 +34,11 @@ class Project(BaseModel):
 
 
 class Worktree(BaseModel):
-    name: str
+    name: WorktreeName
     path: Path
     ports: dict[PortName, int]
+    # None -> No dependency provided, using custom ports
+    dependencies: dict[ProjectId, WorktreeName | None]
 
 
 def load_db(source: bytes | str | Path) -> Database:
