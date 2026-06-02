@@ -1,4 +1,5 @@
 {
+  id = "simple-example";
   projects.server = {
     id = "server";
     requires = [ ];

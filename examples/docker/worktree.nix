@@ -1,4 +1,5 @@
 {
+  id = "docker-example";
   projects.backend = {
     id = "backend";
     ports = [

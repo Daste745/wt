@@ -1,4 +1,5 @@
 {
+  id = "frontend-and-backend-example";
   projects.backend = {
     id = "backend";
     ports = [ "api" ];

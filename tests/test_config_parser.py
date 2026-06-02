@@ -10,10 +10,17 @@ def test_blank_config() -> None:
         parse_config("")
 
 
-def test_empty_config() -> None:
-    """Should return an empty Project when parsing an empty config"""
+def test_empty_config_without_id() -> None:
+    """Should raise a ValueError when parsing an empty config without an id"""
 
-    config = parse_config("{}")
+    with pytest.raises(ValueError):
+        parse_config("{}")
+
+
+def test_config_without_project() -> None:
+    """Should return an empty Project when parsing a config with no project"""
+
+    config = parse_config(r"""{ id = "test"; }""")
     assert len(config.projects) == 0
 
 
@@ -41,7 +48,7 @@ def test_parse_empty_project(source: str) -> None:
 def test_parse_other_toplevel_attrset() -> None:
     """Should ignore unknown top-level fields"""
 
-    config = parse_config("{ services.random = {}; projects = {}; }")
+    config = parse_config(r"""{ id = "test"; services.random = {}; projects = {}; }""")
     assert len(config.projects) == 0
 
 
@@ -50,6 +57,7 @@ def test_parse_project() -> None:
 
     source = r"""
         {
+            id = "test";
             projects.backend = {
                 id = "backend";
                 ports = [ "server" ];
@@ -73,6 +81,7 @@ def test_parse_project_without_optional_fields() -> None:
 
     source = r"""
         {
+            id = "test";
             projects.backend = {
                 id = "backend";
                 postInit = '''';

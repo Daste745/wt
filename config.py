@@ -29,6 +29,7 @@ class Project:
 @final
 @dataclass(frozen=True)
 class Config:
+    id: str
     projects: list[Project]
 
     def get_project(self, project_id: str) -> Project | None:
@@ -73,11 +74,17 @@ def parse_config(source_code: bytes | str | Path) -> Config:
     if not isinstance(toplevel, AttributeSet):
         raise ValueError(f"Expected a top-level attribute set, got {type(toplevel)}")
 
+    config_id: str | None = None
     projects: list[Project] = []
 
     for val in toplevel.values:
         if not isinstance(val, Binding):
             raise ValueError(f"Expected a binding, got {type(val)}")
+
+        # Top-level config `id` definition
+        if val.name == ID:
+            config_id = parse_id(val)
+            continue
 
         # `projects` attrset with nested project definitions
         if val.name == PROJECTS:
@@ -102,7 +109,10 @@ def parse_config(source_code: bytes | str | Path) -> Config:
             project = parse_project(val, name)
             projects.append(project)
 
-    return Config(projects=projects)
+    if config_id is None:
+        raise ValueError("Top-level `id` not found")
+
+    return Config(id=config_id, projects=projects)
 
 
 def parse_project(source: Binding, name: str) -> Project:

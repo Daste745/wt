@@ -4,7 +4,7 @@ from config import Config, Project, validate_config
 def test_validate_empty_config() -> None:
     """Shouldn't return any diagnostics for an empty config"""
 
-    config = Config(projects=[])
+    config = Config(id="test", projects=[])
     assert validate_config(config) == []
 
 
@@ -12,11 +12,12 @@ def test_validate_duplicate_project_id() -> None:
     """Should return a diagnostic for duplicate project IDs"""
 
     config = Config(
+        id="test",
         projects=[
             Project(id="foo", dependencies=[], port_names=[], post_init_script=""),
             Project(id="bar", dependencies=["foo"], port_names=[], post_init_script=""),
             Project(id="foo", dependencies=[], port_names=[], post_init_script=""),
-        ]
+        ],
     )
     diagnostics = validate_config(config)
     assert len(diagnostics) == 1
@@ -28,13 +29,14 @@ def test_validate_multiple_duplicate_project_ids() -> None:
     """Should return a diagnostic for all duplicate project IDs"""
 
     config = Config(
+        id="test",
         projects=[
             Project(id="foo", dependencies=[], port_names=[], post_init_script=""),
             Project(id="baz", dependencies=["bar"], port_names=[], post_init_script=""),
             Project(id="bar", dependencies=["foo"], port_names=[], post_init_script=""),
             Project(id="foo", dependencies=[], port_names=[], post_init_script=""),
             Project(id="baz", dependencies=["bar"], port_names=[], post_init_script=""),
-        ]
+        ],
     )
     diagnostics = validate_config(config)
     assert len(diagnostics) == 2
@@ -48,9 +50,10 @@ def test_validate_unknown_dependency() -> None:
     """Should return a diagnostic for an unknown dependency ID"""
 
     config = Config(
+        id="test",
         projects=[
             Project(id="foo", dependencies=["bar"], port_names=[], post_init_script=""),
-        ]
+        ],
     )
     diagnostics = validate_config(config)
     assert len(diagnostics) == 1
@@ -62,6 +65,7 @@ def test_validate_multiple_unknown_dependencies() -> None:
     """Should return a diagnostic for all unknown dependency IDs"""
 
     config = Config(
+        id="test",
         projects=[
             Project(
                 id="foo",
@@ -69,7 +73,7 @@ def test_validate_multiple_unknown_dependencies() -> None:
                 port_names=[],
                 post_init_script="",
             ),
-        ]
+        ],
     )
     diagnostics = validate_config(config)
     assert len(diagnostics) == 2
