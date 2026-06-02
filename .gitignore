@@ -6,3 +6,7 @@ result/
 .venv/
 __pycache__/
 .pytest_cache/
+
+worktrees/
+db.json
+db.*.json

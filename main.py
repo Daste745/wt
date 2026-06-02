@@ -4,12 +4,16 @@ from typing import Annotated
 
 from cyclopts import App, Parameter
 
+import db
 from config import parse_config, validate_config
+from db import load_db, write_db
 from env import get_base_env, get_port_env_var_name, get_random_port
 
 app = App()
 app_config = App(name="config", help="Manage worktree configuration")
 app.command(app_config)
+app_db = App(name="db", help="Manage the worktree database")
+app.command(app_db)
 
 
 @app_config.command(name="show")
@@ -50,6 +54,142 @@ def config_show(
                 print("    Port names: <none>")
     else:
         print("  No projects")
+
+
+@app_db.command(name="show")
+def db_show(
+    *,
+    # TODO)) Default to a common DB file location
+    db_path: Annotated[Path, Parameter("db-path")],
+    show_paths: Annotated[bool, Parameter("show-paths")] = False,
+) -> int | None:
+    """
+    Show the contents of the database
+
+    Parameters
+    ----------
+    db_path
+        Path to the database file
+    show_paths
+        Show paths of configs and worktrees
+    """
+
+    db = load_db(db_path)
+
+    print(f"Database file {db_path} (version {db.version}) is valid")
+    print()
+
+    if len(db.configs) == 0:
+        print("No configs registered")
+
+    for config_id, config in db.configs.items():
+        print(f"Config '{config_id}'")
+        if show_paths:
+            print(f"  Path: {config.path}")
+
+        if len(config.projects) == 0:
+            print("  No projects registered")
+            continue
+
+        for project_id, project in config.projects.items():
+            print(f"  Project '{project_id}'")
+            if len(project.worktrees) == 0:
+                print("    No worktrees registered")
+                continue
+
+            for worktree in project.worktrees:
+                print(f"    Worktree '{worktree.name}'")
+                if show_paths:
+                    print(f"      Path: {worktree.path}")
+
+                for port_name, port_number in worktree.ports.items():
+                    env_var_name = get_port_env_var_name(project_id, port_name)
+                    print(f"      Port '{port_name}': {port_number} ({env_var_name})")
+
+
+@app.command
+def register(
+    *,
+    # TODO)) Default to a common DB file location
+    db_path: Annotated[Path, Parameter("db-path")],
+    config_path: Annotated[Path, Parameter("config", alias="-c")],
+    project_id: Annotated[str, Parameter("project", alias="-p")],
+    worktree_path: Annotated[Path | None, Parameter("path", required=False)] = None,
+    worktree_name: Annotated[str, Parameter("name", alias="-n")],
+) -> int | None:
+    """
+    Register a worktree
+
+    Parameters
+    ----------
+    db_path:
+        Path to the database file
+    config_path:
+        Path to the worktree configuration file
+    project_id:
+        Project ID from the configuration file
+    worktree_path:
+        Path to the worktree (default: current directory)
+    worktree_name:
+        Name of the worktree
+    """
+
+    if not db_path.exists():
+        raise FileNotFoundError(f"Database file not found: {db_path}")
+
+    config_path = config_path.resolve()
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+
+    if worktree_path is None:
+        worktree_path = Path.cwd()
+    worktree_path = worktree_path.resolve()
+    if not worktree_path.exists():
+        raise ValueError(f"Worktree path does not exist: '{worktree_path}'")
+
+    database = load_db(db_path)
+
+    config = parse_config(config_path)
+    if diagnostics := validate_config(config):
+        print("Configuration errors:")
+        for diagnostic in diagnostics:
+            print(f"  {diagnostic.project_id}: {diagnostic.message}")
+        return 1
+
+    project = config.get_project(project_id)
+    if project is None:
+        raise ValueError(f"Project not found: '{project_id}'")
+
+    db_config = database.configs.get(config.id)
+    if db_config is None:
+        db_config = db.Config(path=config_path, projects={})
+        database.configs[config.id] = db_config
+
+    db_project = db_config.projects.get(project.id)
+    if db_project is None:
+        db_project = db.Project(worktrees=[])
+        db_config.projects[project.id] = db_project
+
+    # Make sure we don't register duplicate worktrees
+    db_worktree = db_project.find_worktree(worktree_name)
+    if db_worktree is not None:
+        raise ValueError(f"Worktree already exists: '{worktree_name}'")
+
+    # Manually input ports when registering an existing worktree
+    ports: dict[db.PortName, int] = {}
+    for port_name in project.port_names:
+        port = input(f"Port number for {port_name}: ")
+        ports[port_name] = int(port.strip())
+
+    db_worktree = db.Worktree(
+        name=worktree_name,
+        path=worktree_path,
+        ports=ports,
+    )
+    db_project.worktrees.append(db_worktree)
+
+    write_db(database, db_path)
+    print(f"Saved updated db to {db_path}")
 
 
 @app.command
