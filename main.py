@@ -112,6 +112,30 @@ def db_show(
                     print(f"      Port '{port_name}': {port_number} ({env_var_name})")
 
 
+@app_db.command(name="init")
+def db_init(
+    *,
+    # TODO)) Default to a common DB file location
+    db_path: Annotated[Path, Parameter("db-path")],
+) -> int | None:
+    """
+    Initialize the database
+
+    Parameters
+    ----------
+    db_path
+        Path to the database file
+    """
+
+    if db_path.exists():
+        print(f"Error: Database file '{db_path}' already exists")
+        return 1
+
+    database = db.Database(version=0, configs={})
+    write_db(database, db_path)
+    print(f"Database initialized at '{db_path}'")
+
+
 @app.command
 def register(
     *,
