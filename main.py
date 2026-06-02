@@ -229,6 +229,8 @@ def register(
 @app.command
 def init(
     *,
+    # TODO)) Default to a common DB file location
+    db_path: Annotated[Path, Parameter("db-path")],
     config_path: Annotated[Path, Parameter("config", alias="-c")],
     project_id: Annotated[str, Parameter("project", alias="-p")],
     worktree_name: Annotated[str, Parameter("name", alias="-n")],
@@ -238,6 +240,8 @@ def init(
 
     Parameters
     ----------
+    db_path:
+        Path to the database file
     config_path:
         Path to the worktree configuration file
     project_id:
@@ -245,6 +249,11 @@ def init(
     worktree_name:
         Name of the worktree
     """
+
+    if not db_path.exists():
+        raise FileNotFoundError(f"Database file not found: {db_path}")
+
+    database = load_db(db_path)
 
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
@@ -258,34 +267,73 @@ def init(
 
     project = config.get_project(project_id)
     if project is None:
-        raise ValueError(f"Project not found: {project_id!r}")
+        raise ValueError(f"Project not found: '{project_id}'")
 
-    print(f"Initalizing project '{project.id}'")
+    db_config = database.configs.get(config.id)
+    if db_config is None:
+        db_config = db.Config(path=config_path, projects={})
+        database.configs[config.id] = db_config
+
+    db_project = db_config.projects.get(project.id)
+    if db_project is None:
+        db_project = db.Project(worktrees=[])
+        db_config.projects[project.id] = db_project
+
+    # Make sure we don't register duplicate worktrees
+    if db_project.find_worktree(worktree_name) is not None:
+        raise ValueError(f"Worktree already exists: '{worktree_name}'")
+
+    print(f"Initalizing worktree '{worktree_name}' for project '{project.id}'")
     env: dict[str, str] = {}
+    selected_dependencies: dict[db.ProjectId, db.WorktreeName | None] = {}
 
+    # TODO)) Only ask for direct dependencies
     for dependency in config.walk_project_dependencies(project):
-        # TODO: Ask the user which worktree they want to use as the dependency
-        # TODO: Get previously generated ports from some persistent config storage
-        for port_name in dependency.port_names:
-            port = input(f"Port number for {dependency.id} -> {port_name}: ")
-            env_var_name = get_port_env_var_name(dependency.id, port_name)
-            env[env_var_name] = port.strip()
+        choices: list[tuple[str, db.Worktree | str]] = []
+
+        db_dependency = db_config.projects.get(dependency.id)
+        if db_dependency:
+            for worktree in db_dependency.worktrees:
+                label = f"{worktree.name} ({worktree.path})"
+                choices.append((label, worktree))
+
+        choices.append(("Provide ports manually", CUSTOM_WORKTREE))
+        selected_db_dependency: db.Worktree | CustomWorktree = inquirer.list_input(
+            f"Which '{dependency.id}' worktree should be used as a dependency?",
+            choices=choices,
+            carousel=True,
+        )
+
+        if selected_db_dependency == CUSTOM_WORKTREE:
+            print(f"Using custom ports for '{dependency.id}'")
+            selected_dependencies[dependency.id] = None
+            for port_name in dependency.port_names:
+                port = input(f"Port number for {dependency.id} -> {port_name}: ")
+                env_var_name = get_port_env_var_name(dependency.id, port_name)
+                env[env_var_name] = port.strip()
+        else:
+            print(f"Using '{dependency.id}' ports from '{selected_db_dependency.name}'")
+            selected_dependencies[dependency.id] = selected_db_dependency.name
+            for port_name, port_number in selected_db_dependency.ports.items():
+                env_var_name = get_port_env_var_name(dependency.id, port_name)
+                env[env_var_name] = str(port_number)
 
     print(f"Worktree name: {worktree_name}")
     env["WORKTREE_NAME"] = worktree_name
 
-    print(f"Ports: {', '.join(project.port_names)}")
-    # TODO: Write generated ports into some persistent config,
-    #       so they can be reused by dependent projects
-    for port_name in project.port_names:
-        port = get_random_port()
-        env_var_name = get_port_env_var_name(project.id, port_name)
-        env[env_var_name] = str(port)
+    generated_ports: dict[str, int] = {}
+    if project.port_names:
+        print(f"Ports: {', '.join(project.port_names)}")
+        for port_name in project.port_names:
+            port = get_random_port()
+            generated_ports[port_name] = port
+            env_var_name = get_port_env_var_name(project.id, port_name)
+            env[env_var_name] = str(port)
 
     print(f"Env: {' '.join(f'{k}={v}' for k, v in env.items())}")
 
     print("Running post-init script...")
-    subprocess.run(
+    post_init_result = subprocess.run(
         [
             "bash",
             "-euo",
@@ -295,6 +343,20 @@ def init(
         ],
         env=get_base_env() | env,
     )
+    if post_init_result.returncode != 0:
+        print(f"Post-init script failed with exit code {post_init_result.returncode}")
+        exit(post_init_result.returncode)
+
+    db_worktree = db.Worktree(
+        name=worktree_name,
+        path=Path.cwd().resolve(),
+        ports=generated_ports,
+        dependencies=selected_dependencies,
+    )
+    db_project.worktrees.append(db_worktree)
+
+    write_db(database, db_path)
+    print(f"Saved updated db to {db_path}")
 
 
 if __name__ == "__main__":
