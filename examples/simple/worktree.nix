@@ -8,6 +8,7 @@
       "foo"
       "bar"
     ];
+    mainPort = "api";
     postInit = ''
       sed -i "s/^PORT=.*\$/PORT=$SERVER_API_PORT/" .env
       sed -i "s/^FOO=.*\$/FOO=$SERVER_FOO_PORT/" .env

@@ -14,6 +14,7 @@ PROJECTS = "projects"
 ID = "id"
 REQUIRES = "requires"
 PORTS = "ports"
+MAIN_PORT = "mainPort"
 POST_INIT = "postInit"
 
 
@@ -23,6 +24,7 @@ class Project:
     id: str
     dependencies: list[str]
     port_names: list[str]
+    main_port: str | None
     post_init_script: str
 
 
@@ -124,6 +126,7 @@ def parse_project(source: Binding, name: str) -> Project:
     parsed_id: str | None = None
     parsed_requires: list[str] = []
     parsed_ports: list[str] = []
+    parsed_main_port: str | None = None
     parsed_post_init: str | None = None
 
     for attribute in source.value.values:
@@ -138,6 +141,9 @@ def parse_project(source: Binding, name: str) -> Project:
 
         elif attribute.name == PORTS:
             parsed_ports = parse_port_names(attribute)
+
+        elif attribute.name == MAIN_PORT:
+            parsed_main_port = parse_main_port(attribute)
 
         elif attribute.name == POST_INIT:
             parsed_post_init = parse_post_init(attribute)
@@ -155,6 +161,7 @@ def parse_project(source: Binding, name: str) -> Project:
         id=parsed_id,
         dependencies=parsed_requires,
         port_names=parsed_ports,
+        main_port=parsed_main_port,
         post_init_script=parsed_post_init,
     )
 
@@ -191,6 +198,12 @@ def parse_port_names(source: Binding) -> list[str]:
     return ports
 
 
+def parse_main_port(source: Binding) -> str:
+    if not isinstance(source.value, Primitive):
+        raise ValueError(f"Expected a primitive for mainPort, got {type(source.value)}")
+    return str(source.value.value)
+
+
 def parse_post_init(source: Binding) -> str:
     if not isinstance(source.value, IndentedString):
         raise ValueError(
@@ -210,7 +223,7 @@ class Diagnostic:
 def validate_config(config: Config) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
 
-    # 1st pass: duplicate project IDs
+    # Duplicate project IDs
     project_ids = set[str]()
     for project in config.projects:
         if project.id in project_ids:
@@ -222,7 +235,17 @@ def validate_config(config: Config) -> list[Diagnostic]:
             )
         project_ids.add(project.id)
 
-    # 2nd pass: unknown dependencies
+    # Unknown main port name
+    for project in config.projects:
+        if project.main_port and project.main_port not in project.port_names:
+            diagnostics.append(
+                Diagnostic(
+                    project_id=project.id,
+                    message=f"Unknown main port: {project.main_port!r}",
+                )
+            )
+
+    # Unknown dependencies
     for project in config.projects:
         for dependency_id in project.dependencies:
             if dependency_id not in project_ids:

@@ -3,6 +3,7 @@
   projects.backend = {
     id = "backend";
     ports = [ "api" ];
+    mainPort = "api";
     postInit = ''
       sed -i "s/^PORT=.*\$/PORT=$BACKEND_API_PORT/" .env
     '';
@@ -10,6 +11,7 @@
   projects.frontend = {
     id = "frontend";
     requires = [ "backend" ];
+    # TODO: Add frontend port and expose via mainPort
     postInit = ''
       sed -i "s/^VITE_API_URL=.*\$/VITE_API_URL=http:\/\/localhost:$BACKEND_API_PORT/" .env
     '';

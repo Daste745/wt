@@ -61,6 +61,7 @@ def test_parse_project() -> None:
             projects.backend = {
                 id = "backend";
                 ports = [ "server" ];
+                mainPort = "server";
                 requires = [ "database" ];
                 postInit = ''
                     sed -i "s/^PORT=.*\$/PORT=$BACKEND_SERVER_PORT/" .env
@@ -72,6 +73,7 @@ def test_parse_project() -> None:
     assert len(config.projects) == 1
     assert config.projects[0].id == "backend"
     assert config.projects[0].port_names == ["server"]
+    assert config.projects[0].main_port == "server"
     assert config.projects[0].dependencies == ["database"]
     assert config.projects[0].post_init_script.startswith("sed -i")
 
@@ -92,5 +94,6 @@ def test_parse_project_without_optional_fields() -> None:
     assert len(config.projects) == 1
     assert config.projects[0].id == "backend"
     assert config.projects[0].port_names == []
+    assert config.projects[0].main_port is None
     assert config.projects[0].dependencies == []
     assert config.projects[0].post_init_script == ""

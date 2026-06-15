@@ -57,6 +57,10 @@ def config_show(
                 print(f"    Port names: {', '.join(project.port_names)}")
             else:
                 print("    Port names: <none>")
+            if project.main_port:
+                print(f"    Main port: {project.main_port}")
+            else:
+                print("    Main port: <none>")
     else:
         print("  No projects")
 

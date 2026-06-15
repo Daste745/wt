@@ -7,6 +7,7 @@
       "postgres"
       "redis"
     ];
+    mainPort = "app";
     postInit = ''
       sed "
         s/%STACK_NAME%/$WORKTREE_NAME/;
