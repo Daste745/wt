@@ -4,6 +4,9 @@ from typing import Literal
 
 from pydantic import BaseModel
 from pydantic_core import from_json
+from xdg_base_dirs import xdg_data_home
+
+DB_FILE_PATH = xdg_data_home() / "wt" / "db.json"
 
 type DbVersion = Literal[0]
 type ConfigId = str

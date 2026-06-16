@@ -8,7 +8,7 @@ from cyclopts import App, Parameter
 
 import db
 from config import parse_config, validate_config
-from db import load_db, write_db
+from db import DB_FILE_PATH, load_db, write_db
 from env import get_base_env, get_port_env_var_name, get_random_port
 from proxy import ProxyHost, get_proxy_host_config, get_proxy_listing_config
 
@@ -72,8 +72,7 @@ def config_show(
 @app_db.command(name="show")
 def db_show(
     *,
-    # TODO)) Default to a common DB file location
-    db_path: Annotated[Path, Parameter("db-path")],
+    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
     show_paths: Annotated[bool, Parameter("show-paths")] = False,
 ) -> int | None:
     """
@@ -128,8 +127,7 @@ def db_show(
 @app_db.command(name="init")
 def db_init(
     *,
-    # TODO)) Default to a common DB file location
-    db_path: Annotated[Path, Parameter("db-path")],
+    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
 ) -> int | None:
     """
     Initialize the database
@@ -152,8 +150,7 @@ def db_init(
 @app_proxy.command(name="config")
 def proxy_config(
     *,
-    # TODO)) Default to a common DB file location
-    db_path: Annotated[Path, Parameter("db-path")],
+    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
     listing: Annotated[bool, Parameter("listing")] = True,
 ) -> int | None:
     """
@@ -216,8 +213,7 @@ def proxy_config(
 @app.command
 def register(
     *,
-    # TODO)) Default to a common DB file location
-    db_path: Annotated[Path, Parameter("db-path")],
+    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
     config_path: Annotated[Path, Parameter("config", alias="-c")],
     project_id: Annotated[str, Parameter("project", alias="-p")],
     worktree_path: Annotated[Path | None, Parameter("path", required=False)] = None,
@@ -330,8 +326,7 @@ def register(
 @app.command
 def init(
     *,
-    # TODO)) Default to a common DB file location
-    db_path: Annotated[Path, Parameter("db-path")],
+    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
     config_path: Annotated[Path, Parameter("config", alias="-c")],
     project_id: Annotated[str, Parameter("project", alias="-p")],
     worktree_name: Annotated[str, Parameter("name", alias="-n")],
