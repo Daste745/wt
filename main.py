@@ -1,4 +1,5 @@
 import subprocess
+from collections import defaultdict
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -9,6 +10,7 @@ import db
 from config import parse_config, validate_config
 from db import load_db, write_db
 from env import get_base_env, get_port_env_var_name, get_random_port
+from proxy import ProxyHost, get_proxy_host_config, get_proxy_listing_config
 
 CUSTOM_WORKTREE = "__CUSTOM_WORKTREE__"
 CustomWorktree = Literal["__CUSTOM_WORKTREE__"]
@@ -19,6 +21,8 @@ app_config = App(name="config", help="Manage worktree configuration")
 app.command(app_config)
 app_db = App(name="db", help="Manage the worktree database")
 app.command(app_db)
+app_proxy = App(name="proxy", help="Manage the proxy server")
+app.command(app_proxy)
 
 
 @app_config.command(name="show")
@@ -143,6 +147,70 @@ def db_init(
     database = db.Database(version=0, configs={})
     write_db(database, db_path)
     print(f"Database initialized at '{db_path}'")
+
+
+@app_proxy.command(name="config")
+def proxy_config(
+    *,
+    # TODO)) Default to a common DB file location
+    db_path: Annotated[Path, Parameter("db-path")],
+    listing: Annotated[bool, Parameter("listing")] = True,
+) -> int | None:
+    """
+    Generate a Caddyfile configuration file
+
+    Parameters
+    ----------
+    db_path
+        Path to the database file
+    listing
+        Include proxy listing in the output
+    """
+
+    db = load_db(db_path)
+
+    for config_id, db_config in db.configs.items():
+        config = parse_config(db_config.path)
+        if diagnostics := validate_config(config):
+            print("Configuration errors:")
+            for diagnostic in diagnostics:
+                print(f"  {diagnostic.project_id}: {diagnostic.message}")
+            return 1
+
+        proxy_hosts: list[ProxyHost] = []
+
+        for project_id, db_project in db_config.projects.items():
+            project = config.get_project(project_id)
+            if project is None:
+                continue
+
+            if project.main_port is None:
+                continue
+
+            for worktree in db_project.worktrees:
+                proxy_hosts.append(
+                    ProxyHost(
+                        config_id=config_id,
+                        project_id=project_id,
+                        worktree_name=worktree.name,
+                        port=worktree.ports[project.main_port],
+                    )
+                )
+
+    grouped_hosts = defaultdict[tuple[str, str], list[ProxyHost]](list)
+    for host in proxy_hosts:
+        grouped_hosts[(host.config_id, host.project_id)].append(host)
+
+    for (config_id, project_id), hosts in grouped_hosts.items():
+        print(f"# Config: {config_id}")
+        print(f"# Project: {project_id}")
+        for host in hosts:
+            print(get_proxy_host_config(host))
+        print()
+
+    if listing:
+        print("# HTML listing of all proxy hosts")
+        print(get_proxy_listing_config(proxy_hosts))
 
 
 @app.command
