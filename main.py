@@ -24,19 +24,24 @@ app.command(app_db)
 app_proxy = App(name="proxy", help="Manage the proxy server")
 app.command(app_proxy)
 
+# Common parameter definitions
+DbPathParam = Annotated[
+    Path,
+    Parameter("db-path", help="Path to the database file"),
+]
+ConfigPathParam = Annotated[
+    Path,
+    Parameter("config", alias="-c", help="Path to the worktree configuration file"),
+]
+
 
 @app_config.command(name="show")
 def config_show(
     *,
-    config_path: Annotated[Path, Parameter("config", alias="-c")],
+    config_path: ConfigPathParam,
 ) -> int | None:
     """
     Parse and show the configuration file
-
-    Parameters
-    ----------
-    config_path:
-        Path to the worktree configuration file
     """
 
     if not config_path.exists():
@@ -72,7 +77,7 @@ def config_show(
 @app_db.command(name="show")
 def db_show(
     *,
-    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
+    db_path: DbPathParam = DB_FILE_PATH,
     show_paths: Annotated[bool, Parameter("show-paths")] = False,
 ) -> int | None:
     """
@@ -80,8 +85,6 @@ def db_show(
 
     Parameters
     ----------
-    db_path
-        Path to the database file
     show_paths
         Show paths of configs and worktrees
     """
@@ -127,15 +130,10 @@ def db_show(
 @app_db.command(name="init")
 def db_init(
     *,
-    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
+    db_path: DbPathParam = DB_FILE_PATH,
 ) -> int | None:
     """
     Initialize the database
-
-    Parameters
-    ----------
-    db_path
-        Path to the database file
     """
 
     if db_path.exists():
@@ -150,7 +148,7 @@ def db_init(
 @app_proxy.command(name="config")
 def proxy_config(
     *,
-    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
+    db_path: DbPathParam = DB_FILE_PATH,
     listing: Annotated[bool, Parameter("listing")] = True,
 ) -> int | None:
     """
@@ -158,8 +156,6 @@ def proxy_config(
 
     Parameters
     ----------
-    db_path
-        Path to the database file
     listing
         Include proxy listing in the output
     """
@@ -213,8 +209,8 @@ def proxy_config(
 @app.command
 def register(
     *,
-    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
-    config_path: Annotated[Path, Parameter("config", alias="-c")],
+    db_path: DbPathParam = DB_FILE_PATH,
+    config_path: ConfigPathParam,
     project_id: Annotated[str, Parameter("project", alias="-p")],
     worktree_path: Annotated[Path | None, Parameter("path", required=False)] = None,
     worktree_name: Annotated[str, Parameter("name", alias="-n")],
@@ -224,10 +220,6 @@ def register(
 
     Parameters
     ----------
-    db_path:
-        Path to the database file
-    config_path:
-        Path to the worktree configuration file
     project_id:
         Project ID from the configuration file
     worktree_path:
@@ -326,8 +318,8 @@ def register(
 @app.command
 def init(
     *,
-    db_path: Annotated[Path, Parameter("db-path")] = DB_FILE_PATH,
-    config_path: Annotated[Path, Parameter("config", alias="-c")],
+    db_path: DbPathParam = DB_FILE_PATH,
+    config_path: ConfigPathParam,
     project_id: Annotated[str, Parameter("project", alias="-p")],
     worktree_name: Annotated[str, Parameter("name", alias="-n")],
 ) -> int | None:
@@ -336,10 +328,6 @@ def init(
 
     Parameters
     ----------
-    db_path:
-        Path to the database file
-    config_path:
-        Path to the worktree configuration file
     project_id:
         Project ID from the configuration file
     worktree_name:
