@@ -450,5 +450,38 @@ def init(
     print(f"Saved updated db to {db_path}")
 
 
+@app.command
+def ports(
+    *,
+    db_path: DbPathParam = DB_FILE_PATH,
+) -> int | None:
+    """
+    Show ports used by the current worktree
+    """
+
+    if not db_path.exists():
+        raise FileNotFoundError(f"Database file not found: {db_path}")
+
+    database = load_db(db_path)
+
+    worktree: db.Worktree | None = None
+
+    # Find current worktree by-path in the database
+    for config_id, db_config in database.configs.items():
+        for project_id, db_project in db_config.projects.items():
+            for db_worktree in db_project.worktrees:
+                if db_worktree.path == Path.cwd().resolve():
+                    worktree = db_worktree
+                    break
+
+    if worktree is None:
+        print("No worktree found for the current path")
+        return None
+
+    print(f"Ports for {worktree.name}:")
+    for port in worktree.ports:
+        print(f"  {port}:\t{worktree.ports[port]}")
+
+
 if __name__ == "__main__":
     app()
