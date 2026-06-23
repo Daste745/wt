@@ -11,9 +11,11 @@
   projects.frontend = {
     id = "frontend";
     requires = [ "backend" ];
-    # TODO: Add frontend port and expose via mainPort
+    ports = [ "vite" ];
+    mainPort = "vite";
     postInit = ''
       sed -i "s/^VITE_API_URL=.*\$/VITE_API_URL=http:\/\/localhost:$BACKEND_API_PORT/" .env
+      echo "VITE_PORT=$FRONTEND_VITE_PORT" >> .env
     '';
   };
 }
