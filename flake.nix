@@ -49,7 +49,7 @@
         };
       });
       packages = eachSystem (pkgs: {
-        wt = pkgs.callPackage ./package.nix {
+        default = pkgs.callPackage ./package.nix {
           inherit uv2nix pyproject-nix pyproject-build-systems;
           python = pkgs.python314;
         };
