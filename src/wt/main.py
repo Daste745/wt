@@ -6,11 +6,11 @@ from typing import Annotated, Literal
 import inquirer
 from cyclopts import App, Parameter
 
-import db
-from config import parse_config, validate_config
-from db import DB_FILE_PATH, load_db, write_db
-from env import get_base_env, get_port_env_var_name, get_random_port
-from proxy import ProxyHost, get_proxy_host_config, get_proxy_listing_config
+from wt import db
+from wt.config import parse_config, validate_config
+from wt.db import DB_FILE_PATH, load_db, write_db
+from wt.env import get_base_env, get_port_env_var_name, get_random_port
+from wt.proxy import ProxyHost, get_proxy_host_config, get_proxy_listing_config
 
 CUSTOM_WORKTREE = "__CUSTOM_WORKTREE__"
 CustomWorktree = Literal["__CUSTOM_WORKTREE__"]

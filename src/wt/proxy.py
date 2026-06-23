@@ -4,7 +4,7 @@ from typing import final
 
 from jinja2 import Template
 
-from util import strip_indented_string
+from wt.util import strip_indented_string
 
 
 @final

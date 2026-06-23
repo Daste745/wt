@@ -1,6 +1,6 @@
 import pytest
 
-from config import parse_config
+from wt.config import parse_config
 
 
 def test_blank_config() -> None:

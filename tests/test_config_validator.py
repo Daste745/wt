@@ -1,4 +1,4 @@
-from config import Config, Project, validate_config
+from wt.config import Config, Project, validate_config
 
 
 def test_validate_empty_config() -> None:

@@ -8,7 +8,7 @@ from nix_manipulator.expressions import AttributeSet, Binding, Primitive
 from nix_manipulator.expressions.indented_string import IndentedString
 from nix_manipulator.expressions.list import NixList
 
-from util import strip_indented_string
+from wt.util import strip_indented_string
 
 PROJECTS = "projects"
 ID = "id"

@@ -1,4 +1,4 @@
-from util import strip_indented_string
+from wt.util import strip_indented_string
 
 
 def test_strip_indented_string_no_prefix() -> None:
